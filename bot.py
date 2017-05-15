@@ -6,6 +6,9 @@ from peewee import *
 import bot_strings as bs
 from telebot import types
 from datetime import datetime, date, time
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 botname = '@design_order_bot'
 token = '374519038:AAFhDPFU0NMPC46_e08QOqyOz97YhK06rbQ'
@@ -15,6 +18,9 @@ months = {1:'Январь', 2:'Февраль', 3:'Март', 4:'Апрель', 
 weekdays = {1:'Понедельник', 2:'Вторник', 3:'Среда', 4:'Четверг', 5:'Пятница', 6:'Суббота', 7:'Воскресенье'}
 
 db = SqliteDatabase('bot.db')
+
+duplicate = [268653382, 5844335]
+dispatch = ['Bistriy_Design@mail.ru']
 
 
 class User(Model):
@@ -40,16 +46,21 @@ def init(message):
 def reboot(message):
 	user = User.select().where(User.user_id == message.chat.id).get()
 	user.delete_instance()
+
+
+@bot.message_handler(commands = ['start'])
+def start(message):
 	user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
 	route(message.chat.id, message, 1)
 
 
-@bot.message_handler(commands = ['start'])
 def greeting(message):
 	username = message.from_user.username
 	sender_id = message.chat.id
 	user = User.select().where(User.user_id == sender_id).get()
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+	back_button = types.KeyboardButton(bs.back)
+	markup.add(back_button)
 	bot.send_message(message.chat.id, bs.greeting.format(username), reply_markup=markup)
 	user.step += 1
 	user.save()
@@ -142,16 +153,59 @@ def rules(sender_id, message):
 	bot.send_message(sender_id, bs.rules, reply_markup=markup, parse_mode="Markdown")
 
 def final(sender_id, message):
+	user = User.select().where(User.user_id == sender_id).get()
 	if message.text != bs.agreement:
 		markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-		agreement_button = types.KeyboardButton(bs.agreement)
 		back_button = types.KeyboardButton(bs.back)
-		markup.add(agreement_button)
 		markup.add(back_button)
-		bot.send_message(sender_id, bs.rules, reply_markup=markup, parse_mode="Markdown")
+		bot.send_message(sender_id, bs.rules)
 	else:
-		bot.send_message(sender_id, bs.thanks)	
-		
+		order = '''
+		Имя: {0}
+		{1}
+		Дедлайн: {2}
+		Бюджет: {3}
+		E-mail: {4}
+		тел: {5}
+		'''.format(user.username, user.task, user.deadline, user.budget, user.email, user.mobile)
+
+		dispatch.append(user.email)
+		for i in dispatch:
+			send_email(i, order)
+		for i in duplicate:
+			bot.send_message(i, order)	
+		bot.send_message(sender_id, bs.thanks)
+		user.delete_instance()	
+
+		'''markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+		new_order_button = types.KeyboardButton(bs.new_order)
+		markup.add(new_order_button)
+		bot.send_message(sender_id, bs.new_order, reply_markup=markup, parse_mode="Markdown")'''
+
+
+def send_email(address, text):
+	fromaddr = "bistriy.design@mail.ru"
+	toaddr = address
+	mypass = "qazwsx123"
+	 
+	msg = MIMEMultipart()
+	msg['From'] = fromaddr
+	msg['To'] = toaddr
+	msg['Subject'] = bs.design_order
+	 
+	body = text
+	msg.attach(MIMEText(body, 'plain'))
+	 
+	server = smtplib.SMTP('smtp.mail.ru', 587)
+	server.starttls()
+	server.login(fromaddr, mypass)
+	text = msg.as_string()
+	try:
+		server.sendmail(fromaddr, toaddr, text)
+	except:
+		print("Mail send error")
+	server.quit()
+
 
 @bot.message_handler(content_types=['text'])
 def reply(message):
@@ -165,6 +219,9 @@ def reply(message):
 		user.step = step
 		user.save()
 		route(sender_id, message, step)
+		return True
+	if message.text == bs.new_order:
+		reboot(message)
 		return True
 	route(sender_id, message, step)
 
