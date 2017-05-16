@@ -25,7 +25,7 @@ dispatch = ['Bistriy_Design@mail.ru']
 
 class User(Model):
 	user_id = IntegerField(unique = True, primary_key = True)
-	username = CharField()
+	username = CharField(null=True)
 	step = IntegerField()
 	task = TextField(null=True)
 	deadline = CharField(null=True)
@@ -44,13 +44,19 @@ def init(message):
 
 @bot.message_handler(commands = ['reboot'])
 def reboot(message):
-	user = User.select().where(User.user_id == message.chat.id).get()
-	user.delete_instance()
-
+	#user = User.select().where(User.user_id == message.chat.id).get()
+	try:
+		user = User.get(User.user_id == message.chat.id)
+		user.delete_instance()
+	except:
+		print("Error")
 
 @bot.message_handler(commands = ['start'])
 def start(message):
-	user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
+	try:
+		user = User.get(User.user_id == message.chat.id)
+	except:
+		user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
 	route(message.chat.id, message, 1)
 
 
