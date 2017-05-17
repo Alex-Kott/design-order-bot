@@ -1,3 +1,3 @@
-botname = '@design_order_bot'
-token = '374519038:AAFhDPFU0NMPC46_e08QOqyOz97YhK06rbQ'
-db_name = 'design_order_bot'
+botname = '@Bistriy_Design_bot'
+token = '321912583:AAH5DhO3wq7-8T4QRZXoHL2eR7lO8TeY0gs'
+db_name = 'Bistriy Design'

@@ -10,8 +10,8 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-botname = '@design_order_bot'
-token = '374519038:AAFhDPFU0NMPC46_e08QOqyOz97YhK06rbQ'
+botname = '@Bistriy_Design_bot'
+token = '321912583:AAH5DhO3wq7-8T4QRZXoHL2eR7lO8TeY0gs'
 db_name = 'design_order_bot'
 bot = telebot.TeleBot(cfg.token)
 months = {1:'Январь', 2:'Февраль', 3:'Март', 4:'Апрель', 5:'Май', 6:'Июнь', 7:'Июль', 8:'Август', 9:'Сентябрь', 10:'Октябрь', 11:'Ноябрь', 12:'Декабрь'}
@@ -19,7 +19,7 @@ weekdays = {1:'Понедельник', 2:'Вторник', 3:'Среда', 4:'�
 
 db = SqliteDatabase('bot.db')
 
-duplicate = [268653382, 5844335]
+duplicate = ['268653382', '5844335']
 dispatch = ['Bistriy_Design@mail.ru']
 
 
@@ -54,9 +54,11 @@ def reboot(message):
 @bot.message_handler(commands = ['start'])
 def start(message):
 	try:
-		user = User.get(User.user_id == message.chat.id)
-	except:
 		user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
+	except:
+		user = User.get(User.user_id == message.chat.id)
+		user.step = 1;
+		user.save()
 	route(message.chat.id, message, 1)
 
 
@@ -83,23 +85,25 @@ def deadline(sender_id, message):
 
 def budget(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
-	if not re.match(r'\d{1,2}\s+\d{1,2}', message.text):
-		bot.send_message(sender_id, bs.deadline_error)
-		return True
-	date = message.text
-	day = int((re.search(r'^\d+', date)).group(0))
-	month = int((re.search(r'\d+$', date)).group(0))
-	if int(day) > 31 or int(day) < 1:
-		bot.send_message(sender_id, bs.day_error)
-		return False
-	if int(month) > 12 or int(month) < 1:
-		bot.send_message(sender_id, bs.month_error)
-		return False
-	dt = datetime.now()
-	final_date = str(day)+' {0} ({1})'.format(months[month], weekdays[dt.isoweekday()])
-	user.deadline = final_date
-	user.step += 1
-	user.save()
+	if message.text != bs.back:
+		if not re.match(r'\d{1,2}\s+\d{1,2}', message.text):
+			bot.send_message(sender_id, bs.deadline_error)
+			return True
+		else:
+			date = message.text
+			day = int((re.search(r'^\d+', date)).group(0))
+			month = int((re.search(r'\d+$', date)).group(0))
+			if int(day) > 31 or int(day) < 1:
+				bot.send_message(sender_id, bs.day_error)
+				return False
+			if int(month) > 12 or int(month) < 1:
+				bot.send_message(sender_id, bs.month_error)
+				return False
+			dt = datetime.now()
+			final_date = str(day)+' {0} ({1})'.format(months[month], weekdays[dt.isoweekday()])
+			user.deadline = final_date
+			user.step += 1
+			user.save()
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
 	budget_min_button = types.KeyboardButton(bs.budget_min)
 	budget_avg_button = types.KeyboardButton(bs.budget_avg)
@@ -110,6 +114,8 @@ def budget(sender_id, message):
 	bot.send_message(sender_id, bs.budget, reply_markup=markup)
 
 def email(sender_id, message):
+	if message.text == bs.back:
+		return True
 	user = User.select().where(User.user_id == sender_id).get()
 	if message.text == '1':
 		message.text = bs.budget_min
@@ -177,7 +183,10 @@ def final(sender_id, message):
 
 		dispatch.append(user.email)
 		for i in dispatch:
-			send_email(i, order)
+			try:
+				send_email(i, order)
+			except:
+				print("Mailing error")
 		for i in duplicate:
 			bot.send_message(i, order)	
 		bot.send_message(sender_id, bs.thanks)
@@ -218,9 +227,9 @@ def reply(message):
 	sender_id = message.chat.id
 	user = User.select().where(User.user_id == sender_id).get()
 	step = user.step
-	print("Step "+str(step))
+	
 	if message.text == bs.back:
-		if step > 1:
+		if step > 0:
 			step -= 2
 		user.step = step
 		user.save()
@@ -232,6 +241,7 @@ def reply(message):
 	route(sender_id, message, step)
 
 def route(sender_id, message, step):
+	print("Step "+str(step))
 	if step == 0 or step == 1 :
 		greeting(message)
 	if step == 2:
