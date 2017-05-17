@@ -26,6 +26,8 @@ dispatch = ['Bistriy_Design@mail.ru']
 class User(Model):
 	user_id = IntegerField(unique = True, primary_key = True)
 	username = CharField(null=True)
+	first_name = CharField(null=True)
+	last_name = CharField(null=True)
 	step = IntegerField()
 	task = TextField(null=True)
 	deadline = CharField(null=True)
@@ -36,15 +38,34 @@ class User(Model):
 	class Meta:
 		database = db
 
+class SentOrder(Model):
+	order_id = IntegerField(unique = True, primary_key = True)
+	user_id = IntegerField(null=True)
+	username = CharField(null=True)
+	first_name = CharField(null=True)
+	last_name = CharField(null=True)
+	task = TextField(null=True)
+	deadline = CharField(null=True)
+	budget = CharField(default=0)
+	email = CharField(null=True)
+	mobile = CharField(null=True)
+
+
+	class Meta:
+		database = db
+
 @bot.message_handler(commands = ['init'])
 def init(message):
-	db.connect()
-	db.create_table(User)
+	#db.connect()
+	try:
+		db.create_table(User)
+		db.create_table(SentOrder)
+	except:
+		print("Error during table create")
 	user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
 
 @bot.message_handler(commands = ['reboot'])
 def reboot(message):
-	#user = User.select().where(User.user_id == message.chat.id).get()
 	try:
 		user = User.get(User.user_id == message.chat.id)
 		user.delete_instance()
@@ -54,7 +75,7 @@ def reboot(message):
 @bot.message_handler(commands = ['start'])
 def start(message):
 	try:
-		user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
+		user = User.create(user_id = message.chat.id, username = message.chat.username, first_name = message.chat.first_name, last_name = message.chat.last_name, step = 1)
 	except:
 		user = User.get(User.user_id == message.chat.id)
 		user.step = 1;
@@ -63,25 +84,26 @@ def start(message):
 
 
 def greeting(message):
-	username = message.from_user.username
+	first_name = message.chat.first_name
 	sender_id = message.chat.id
 	user = User.select().where(User.user_id == sender_id).get()
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(back_button)
-	bot.send_message(message.chat.id, bs.greeting.format(username), reply_markup=markup)
+	bot.send_message(message.chat.id, bs.greeting.format(first_name), reply_markup=markup)
 	user.step += 1
 	user.save()
 
 def deadline(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
-	user.task = message.text
-	user.step += 1
-	user.save()
+	if message.text != bs.back:
+		user.task = message.text
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(back_button)
 	bot.send_message(sender_id, bs.deadline, reply_markup=markup)
+	user.step += 1
+	user.save()
 
 def budget(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
@@ -102,8 +124,7 @@ def budget(sender_id, message):
 			dt = datetime.now()
 			final_date = str(day)+' {0} ({1})'.format(months[month], weekdays[dt.isoweekday()])
 			user.deadline = final_date
-			user.step += 1
-			user.save()
+			
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
 	budget_min_button = types.KeyboardButton(bs.budget_min)
 	budget_avg_button = types.KeyboardButton(bs.budget_avg)
@@ -112,57 +133,61 @@ def budget(sender_id, message):
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(budget_min_button, budget_avg_button, budget_big_button, budget_max_button, back_button)
 	bot.send_message(sender_id, bs.budget, reply_markup=markup)
-
-def email(sender_id, message):
-	if message.text == bs.back:
-		return True
-	user = User.select().where(User.user_id == sender_id).get()
-	if message.text == '1':
-		message.text = bs.budget_min
-	if message.text == '2':
-		message.text = bs.budget_avg
-	if message.text == '3':
-		message.text = bs.budget_big
-	if message.text == '4':
-		message.text = bs.budget_max
-	user.budget = message.text
 	user.step += 1
 	user.save()
+
+def email(sender_id, message):
+	user = User.select().where(User.user_id == sender_id).get()
+	if message.text != bs.back:
+		if message.text == '1':
+			message.text = bs.budget_min
+		if message.text == '2':
+			message.text = bs.budget_avg
+		if message.text == '3':
+			message.text = bs.budget_big
+		if message.text == '4':
+			message.text = bs.budget_max
+		user.budget = message.text
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(back_button)
 	bot.send_message(sender_id, bs.email, reply_markup=markup)
+	user.step += 1
+	user.save()
 
 def mobile(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
-	message.text = message.text.strip()
-	if re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", message.text):
-		user.email = message.text
-		user.step += 1
-		user.save()
-	else:
-		bot.send_message(sender_id, bs.email_error)
-		return False
+	if message.text != bs.back:
+		message.text = message.text.strip()
+		if re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", message.text):
+			user.email = message.text
+		else:
+			bot.send_message(sender_id, bs.email_error)
+			return False
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(back_button)
 	bot.send_message(sender_id, bs.mobile, reply_markup=markup)
+	user.step += 1
+	user.save()
+	
 
 def rules(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
-	if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$', message.text):
-		user.mobile = message.text
-		user.step += 1
-		user.save()
-	else:
-		bot.send_message(sender_id, bs.mobile_error)
-		return False
+	if message.text != bs.back:
+		if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$', message.text):
+			user.mobile = message.text
+		else:
+			bot.send_message(sender_id, bs.mobile_error)
+			return False
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	agreement_button = types.KeyboardButton(bs.agreement)
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(agreement_button)
 	markup.add(back_button)
 	bot.send_message(sender_id, bs.rules, reply_markup=markup, parse_mode="Markdown")
+	user.step += 1
+	user.save()
 
 def final(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
@@ -173,13 +198,13 @@ def final(sender_id, message):
 		bot.send_message(sender_id, bs.rules)
 	else:
 		order = '''
-		Имя: {0}
-		{1}
-		Дедлайн: {2}
-		Бюджет: {3}
-		E-mail: {4}
-		тел: {5}
-		'''.format(user.username, user.task, user.deadline, user.budget, user.email, user.mobile)
+		Имя: {0} {1} ({2})
+		{3}
+		Дедлайн: {4}
+		Бюджет: {5}
+		E-mail: {6}
+		тел: {7}
+		'''.format(user.first_name, user.last_name, user.username, user.task, user.deadline, user.budget, user.email, user.mobile)
 
 		dispatch.append(user.email)
 		for i in dispatch:
@@ -189,13 +214,13 @@ def final(sender_id, message):
 				print("Mailing error")
 		for i in duplicate:
 			bot.send_message(i, order)	
-		bot.send_message(sender_id, bs.thanks)
+		try:
+			order = SentOrder.create(user_id = user.user_id, username = user.username, first_name = user.first_name, last_name = user.last_name, task = user.task, deadline = user.deadline, budget = user.budget, email = user.email, mobile = user.mobile)
+		except:
+			print("Can't save order")
+		markup = types.ReplyKeyboardRemove(selective=False)
+		bot.send_message(sender_id, bs.thanks, reply_markup=markup)
 		user.delete_instance()	
-
-		'''markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-		new_order_button = types.KeyboardButton(bs.new_order)
-		markup.add(new_order_button)
-		bot.send_message(sender_id, bs.new_order, reply_markup=markup, parse_mode="Markdown")'''
 
 
 def send_email(address, text):
@@ -225,26 +250,31 @@ def send_email(address, text):
 @bot.message_handler(content_types=['text'])
 def reply(message):
 	sender_id = message.chat.id
-	user = User.select().where(User.user_id == sender_id).get()
-	step = user.step
-	
-	if message.text == bs.back:
-		if step > 0:
-			step -= 2
-		user.step = step
-		user.save()
+	try:
+		user = User.select().where(User.user_id == sender_id).get()
+		step = user.step
+	except:
+		start(message)
+	try:
+		if message.text == bs.back:
+			if step > 0:
+				step -= 2
+			user.step = step
+			user.save()
+			route(sender_id, message, step)
+			return True
+		if message.text == bs.new_order:
+			reboot(message)
+			return True
 		route(sender_id, message, step)
-		return True
-	if message.text == bs.new_order:
-		reboot(message)
-		return True
-	route(sender_id, message, step)
+	except:
+		print("Step error")
 
 def route(sender_id, message, step):
-	print("Step "+str(step))
 	if step == 0 or step == 1 :
 		greeting(message)
 	if step == 2:
+		print(deadline)
 		deadline(sender_id, message)
 	if step == 3:
 		budget(sender_id, message)
@@ -257,36 +287,6 @@ def route(sender_id, message, step):
 	if step == 7:
 		final(sender_id, message)
 
-
-	
-
-
-"""
-def init_db():
-	conn = sqlite.connect(config.db_name)
-	curr = conn.cursor()
-	query = '''
-	CREATE TABLE IF NOT EXISTS users(
-		`id` INTEGER PRIMARY KEY NOT NULL,
-		`username` VARCHAR(32),
-		`stage` INTEGER,
-		`task` TEXT,
-		`dealine` TEXT,
-		`budget` TEXT,
-		`email` TEXT,
-		`mobile` TEXT
-	)'''
-	curr.execute(query)
-	conn.commit()
-	conn.close()
-
-def update_user(id, stage, task, deadline, budget, email, mobile):
-	conn = sqlite.connect(config.db_name)
-	curr = conn.cursor()
-	
-	curr.execute(query)
-	conn.commit()
-	conn.close()"""
 
 
 if __name__ == '__main__':
