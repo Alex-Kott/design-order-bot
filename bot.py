@@ -74,21 +74,24 @@ def reboot(message):
 
 @bot.message_handler(commands = ['start'])
 def start(message):
+	route(message.chat.id, message, 1)
+
+
+
+def greeting(message):
 	try:
 		user = User.create(user_id = message.chat.id, username = message.chat.username, first_name = message.chat.first_name, last_name = message.chat.last_name, step = 1)
 	except:
 		user = User.get(User.user_id == message.chat.id)
 		user.step = 1;
 		user.save()
-	route(message.chat.id, message, 1)
-
-
-def greeting(message):
 	first_name = message.chat.first_name
 	sender_id = message.chat.id
 	user = User.select().where(User.user_id == sender_id).get()
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+	cancel_button = types.KeyboardButton(bs.cancel)
 	back_button = types.KeyboardButton(bs.back)
+	markup.add(cancel_button)
 	markup.add(back_button)
 	bot.send_message(message.chat.id, bs.greeting.format(first_name), reply_markup=markup)
 	user.step += 1
@@ -218,7 +221,10 @@ def final(sender_id, message):
 			order = SentOrder.create(user_id = user.user_id, username = user.username, first_name = user.first_name, last_name = user.last_name, task = user.task, deadline = user.deadline, budget = user.budget, email = user.email, mobile = user.mobile)
 		except:
 			print("Can't save order")
-		markup = types.ReplyKeyboardRemove(selective=False)
+
+		markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+		checkout_button = types.KeyboardButton(bs.checkout)
+		markup.add(checkout_button)
 		bot.send_message(sender_id, bs.thanks, reply_markup=markup)
 		user.delete_instance()	
 
@@ -250,6 +256,22 @@ def send_email(address, text):
 @bot.message_handler(content_types=['text'])
 def reply(message):
 	sender_id = message.chat.id
+	if message.text == bs.checkout:
+		try:
+			user = User.select().where(User.user_id == sender_id).get()
+			user.delete_instance()
+		except:
+			print("Error")
+		start(message)
+		return True
+	if message.text == bs.cancel:
+		user = User.select().where(User.user_id == sender_id).get()
+		markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+		checkout_button = types.KeyboardButton(bs.checkout)
+		markup.add(checkout_button)
+		bot.send_message(sender_id, bs.lets_checkout, reply_markup=markup)
+		user.delete_instance()
+		return False
 	try:
 		user = User.select().where(User.user_id == sender_id).get()
 		step = user.step
