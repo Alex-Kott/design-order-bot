@@ -152,37 +152,61 @@ def email(sender_id, message):
 			message.text = bs.budget_max
 		user.budget = message.text
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-	back_button = types.KeyboardButton(bs.back)
-	markup.add(back_button)
-	bot.send_message(sender_id, bs.email, reply_markup=markup)
+	try:
+		order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
+		accept_button = types.KeyboardButton(bs.accept)
+		back_button = types.KeyboardButton(bs.back)
+		markup.add(accept_button)
+		markup.add(back_button)
+		bot.send_message(sender_id, bs.your_email.format(order.email), reply_markup=markup)
+	except:
+		back_button = types.KeyboardButton(bs.back)
+		markup.add(back_button)
+		bot.send_message(sender_id, bs.email, reply_markup=markup)
 	user.step += 1
 	user.save()
 
 def mobile(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
 	if message.text != bs.back:
-		message.text = message.text.strip()
-		if re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", message.text):
-			user.email = message.text
+		if message.text != bs.accept:
+			message.text = message.text.strip()
+			if re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", message.text):
+				user.email = message.text
+			else:
+				bot.send_message(sender_id, bs.email_error)
+				return False
 		else:
-			bot.send_message(sender_id, bs.email_error)
-			return False
+			order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
+			user.email = order.email
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-	back_button = types.KeyboardButton(bs.back)
-	markup.add(back_button)
-	bot.send_message(sender_id, bs.mobile, reply_markup=markup)
-	user.step += 1
+	try:
+		order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
+		accept_button = types.KeyboardButton(bs.accept)
+		back_button = types.KeyboardButton(bs.back)
+		markup.add(accept_button)
+		markup.add(back_button)
+		bot.send_message(sender_id, bs.your_mobile.format(order.mobile), reply_markup=markup)
+	except:
+		back_button = types.KeyboardButton(bs.back)
+		markup.add(back_button)
+		bot.send_message(sender_id, bs.mobile, reply_markup=markup)
+	user.step = user.step + 1
 	user.save()
 	
 
 def rules(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
 	if message.text != bs.back:
-		if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$', message.text):
-			user.mobile = message.text
+		if message.text != bs.accept:
+			if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$', message.text):
+				user.mobile = message.text
+			else:
+				bot.send_message(sender_id, bs.mobile_error)
+				return False
 		else:
-			bot.send_message(sender_id, bs.mobile_error)
-			return False
+			order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
+			user.mobile = order.mobile
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	agreement_button = types.KeyboardButton(bs.agreement)
 	back_button = types.KeyboardButton(bs.back)
@@ -277,20 +301,20 @@ def reply(message):
 		step = user.step
 	except:
 		start(message)
-	try:
-		if message.text == bs.back:
-			if step > 0:
-				step -= 2
-			user.step = step
-			user.save()
-			route(sender_id, message, step)
-			return True
-		if message.text == bs.new_order:
-			reboot(message)
-			return True
+	#try:
+	if message.text == bs.back:
+		if step > 0:
+			step -= 2
+		user.step = step
+		user.save()
 		route(sender_id, message, step)
-	except:
-		print("Step error")
+		return True
+	if message.text == bs.new_order:
+		reboot(message)
+		return True
+	route(sender_id, message, step)
+	#except:
+		#print("Step error")
 
 def route(sender_id, message, step):
 	if step == 0 or step == 1 :
