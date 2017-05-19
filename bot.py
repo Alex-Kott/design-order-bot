@@ -74,7 +74,13 @@ def reboot(message):
 
 @bot.message_handler(commands = ['start'])
 def start(message):
-	route(message.chat.id, message, 1)
+	sender_id = message.chat.id
+	first_name = message.chat.first_name
+	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+	checkout_button = types.KeyboardButton(bs.checkout)
+	markup.add(checkout_button)
+	bot.send_message(sender_id, bs.greeting.format(first_name), reply_markup=markup)
+	#route(message.chat.id, message, 1)
 
 
 
@@ -90,10 +96,8 @@ def greeting(message):
 	user = User.select().where(User.user_id == sender_id).get()
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	cancel_button = types.KeyboardButton(bs.cancel)
-	back_button = types.KeyboardButton(bs.back)
 	markup.add(cancel_button)
-	markup.add(back_button)
-	bot.send_message(message.chat.id, bs.greeting.format(first_name), reply_markup=markup)
+	bot.send_message(message.chat.id, bs.task, reply_markup=markup)
 	user.step += 1
 	user.save()
 
@@ -104,6 +108,8 @@ def deadline(sender_id, message):
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	back_button = types.KeyboardButton(bs.back)
 	markup.add(back_button)
+	cancel_button = types.KeyboardButton(bs.cancel)
+	markup.add(cancel_button)
 	bot.send_message(sender_id, bs.deadline, reply_markup=markup)
 	user.step += 1
 	user.save()
@@ -134,7 +140,8 @@ def budget(sender_id, message):
 	budget_big_button = types.KeyboardButton(bs.budget_big)
 	budget_max_button = types.KeyboardButton(bs.budget_max)
 	back_button = types.KeyboardButton(bs.back)
-	markup.add(budget_min_button, budget_avg_button, budget_big_button, budget_max_button, back_button)
+	cancel_button = types.KeyboardButton(bs.cancel)
+	markup.add(budget_min_button, budget_avg_button, budget_big_button, budget_max_button, back_button, cancel_button)
 	bot.send_message(sender_id, bs.budget, reply_markup=markup)
 	user.step += 1
 	user.save()
@@ -156,8 +163,10 @@ def email(sender_id, message):
 		order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
 		accept_button = types.KeyboardButton(bs.accept)
 		back_button = types.KeyboardButton(bs.back)
+		cancel_button = types.KeyboardButton(bs.cancel)
 		markup.add(accept_button)
 		markup.add(back_button)
+		markup.add(cancel_button)
 		bot.send_message(sender_id, bs.your_email.format(order.email), reply_markup=markup)
 	except:
 		back_button = types.KeyboardButton(bs.back)
@@ -184,8 +193,10 @@ def mobile(sender_id, message):
 		order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
 		accept_button = types.KeyboardButton(bs.accept)
 		back_button = types.KeyboardButton(bs.back)
+		cancel_button = types.KeyboardButton(bs.cancel)
 		markup.add(accept_button)
 		markup.add(back_button)
+		markup.add(cancel_button)
 		bot.send_message(sender_id, bs.your_mobile.format(order.mobile), reply_markup=markup)
 	except:
 		back_button = types.KeyboardButton(bs.back)
@@ -210,8 +221,10 @@ def rules(sender_id, message):
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	agreement_button = types.KeyboardButton(bs.agreement)
 	back_button = types.KeyboardButton(bs.back)
+	cancel_button = types.KeyboardButton(bs.cancel)
 	markup.add(agreement_button)
 	markup.add(back_button)
+	markup.add(cancel_button)
 	bot.send_message(sender_id, bs.rules, reply_markup=markup, parse_mode="Markdown")
 	user.step += 1
 	user.save()
@@ -280,20 +293,21 @@ def send_email(address, text):
 @bot.message_handler(content_types=['text'])
 def reply(message):
 	sender_id = message.chat.id
+	first_name = message.chat.first_name
 	if message.text == bs.checkout:
 		try:
 			user = User.select().where(User.user_id == sender_id).get()
 			user.delete_instance()
 		except:
 			print("Error")
-		start(message)
+		route(message.chat.id, message, 1)
 		return True
 	if message.text == bs.cancel:
 		user = User.select().where(User.user_id == sender_id).get()
 		markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 		checkout_button = types.KeyboardButton(bs.checkout)
 		markup.add(checkout_button)
-		bot.send_message(sender_id, bs.lets_checkout, reply_markup=markup)
+		bot.send_message(sender_id, bs.greeting.format(first_name), reply_markup=markup)
 		user.delete_instance()
 		return False
 	try:
@@ -320,7 +334,6 @@ def route(sender_id, message, step):
 	if step == 0 or step == 1 :
 		greeting(message)
 	if step == 2:
-		print(deadline)
 		deadline(sender_id, message)
 	if step == 3:
 		budget(sender_id, message)
