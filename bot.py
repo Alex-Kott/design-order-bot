@@ -80,7 +80,6 @@ def start(message):
 	checkout_button = types.KeyboardButton(bs.checkout)
 	markup.add(checkout_button)
 	bot.send_message(sender_id, bs.greeting.format(first_name), reply_markup=markup)
-	#route(message.chat.id, message, 1)
 
 
 
@@ -210,7 +209,7 @@ def rules(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
 	if message.text != bs.back:
 		if message.text != bs.accept:
-			if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$', message.text):
+			if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{3,10}$', message.text):
 				user.mobile = message.text
 			else:
 				bot.send_message(sender_id, bs.mobile_error)
@@ -315,7 +314,7 @@ def reply(message):
 		step = user.step
 	except:
 		start(message)
-	#try:
+		return True
 	if message.text == bs.back:
 		if step > 0:
 			step -= 2
@@ -326,9 +325,10 @@ def reply(message):
 	if message.text == bs.new_order:
 		reboot(message)
 		return True
-	route(sender_id, message, step)
-	#except:
-		#print("Step error")
+	try:
+		route(sender_id, message, step)
+	except:
+		print("Step error")
 
 def route(sender_id, message, step):
 	if step == 0 or step == 1 :
