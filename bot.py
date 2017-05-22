@@ -20,7 +20,7 @@ weekdays = {1:'Понедельник', 2:'Вторник', 3:'Среда', 4:'�
 db = SqliteDatabase('bot.db')
 
 duplicate = ['268653382', '5844335']
-bd_email = 'Bistriy_Design@mail.ru'
+bd_email = "Bistriy_Design@mail.ru"
 
 
 class User(Model):
@@ -132,7 +132,6 @@ def budget(sender_id, message):
 			dt = datetime.now()
 			dt = dt.replace(month=month, day=day)
 			final_date = str(day)+' {0} ({1})'.format(months[month], weekdays[dt.isoweekday()])
-			print(dt.isoweekday())
 			user.deadline = final_date
 			
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
