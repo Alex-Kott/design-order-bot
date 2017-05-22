@@ -20,7 +20,7 @@ weekdays = {1:'Понедельник', 2:'Вторник', 3:'Среда', 4:'�
 db = SqliteDatabase('bot.db')
 
 duplicate = ['268653382', '5844335']
-dispatch = ['Bistriy_Design@mail.ru']
+bd_email = 'Bistriy_Design@mail.ru'
 
 
 class User(Model):
@@ -245,12 +245,16 @@ def final(sender_id, message):
 		тел: {7}
 		'''.format(user.first_name, user.last_name, user.username, user.task, user.deadline, user.budget, user.email, user.mobile)
 
-		dispatch.append(user.email)
-		for i in dispatch:
-			try:
-				send_email(i, order)
-			except:
-				print("Mailing error")
+		try:
+			send_email(user.email, order)
+		except:
+			print("Mailing to user error")
+
+		try:
+			send_email(bd_email, order)
+		except:
+			print("Mailing to dispatcher error")
+
 		for i in duplicate:
 			bot.send_message(i, order)	
 		try:
