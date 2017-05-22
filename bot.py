@@ -130,7 +130,9 @@ def budget(sender_id, message):
 				bot.send_message(sender_id, bs.month_error)
 				return False
 			dt = datetime.now()
+			dt = dt.replace(month=month, day=day)
 			final_date = str(day)+' {0} ({1})'.format(months[month], weekdays[dt.isoweekday()])
+			print(dt.isoweekday())
 			user.deadline = final_date
 			
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
