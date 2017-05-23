@@ -19,7 +19,7 @@ weekdays = {1:'Понедельник', 2:'Вторник', 3:'Среда', 4:'�
 
 db = SqliteDatabase('bot.db')
 
-duplicate = ['268653382', '5844335']
+duplicate = [268653382, 5844335, -1001117829937]
 bd_email = "Bistriy_Design@mail.ru"
 
 
