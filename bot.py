@@ -50,6 +50,12 @@ class SentOrder(Model):
 	email = CharField(null=True)
 	mobile = CharField(null=True)
 
+	class Meta:
+		database = db
+
+class Oferta(Model):
+	oferta_id = IntegerField(unique = True, primary_key = True)
+	link = CharField(null = True)
 
 	class Meta:
 		database = db
@@ -63,6 +69,10 @@ def init(message):
 	except:
 		print("Error during table create")
 	user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
+
+@bot.message_handler(commands = ['add_oferta'])
+def add_oferta(message):
+
 
 @bot.message_handler(commands = ['reboot'])
 def reboot(message):
