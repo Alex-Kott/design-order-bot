@@ -66,12 +66,23 @@ def init(message):
 	try:
 		db.create_table(User)
 		db.create_table(SentOrder)
+		db.create_table(Oferta)
 	except:
 		print("Error during table create")
 	user = User.create(user_id = message.chat.id, username = message.chat.username, step = 1)
 
 @bot.message_handler(commands = ['add_oferta'])
 def add_oferta(message):
+	sender_id = message.chat.id
+	oferta = Oferta.get(Oferta.oferta_id == 1)
+	link = re.sub(r'/add_oferta ', '', message.text)
+	if re.match(r'^(https?:\/\/)?([\w\.]+)\.([a-z]{2,6}\.?)(\/[\w\.]*)*\/?$', link):
+		if sender_id in duplicate:
+			oferta.link = link
+			oferta.save()
+			bot.send_message(sender_id, bs.oferta_confirmed)
+	else:
+		bot.send_message(sender_id, bs.oferta_rejected)
 
 
 @bot.message_handler(commands = ['reboot'])
@@ -218,6 +229,7 @@ def mobile(sender_id, message):
 
 def rules(sender_id, message):
 	user = User.select().where(User.user_id == sender_id).get()
+	oferta = Oferta.get(Oferta.oferta_id == 1)
 	if message.text != bs.back:
 		if message.text != bs.accept:
 			if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{3,10}$', message.text):
@@ -235,7 +247,7 @@ def rules(sender_id, message):
 	markup.add(agreement_button)
 	markup.add(back_button)
 	markup.add(cancel_button)
-	bot.send_message(sender_id, bs.rules, reply_markup=markup, parse_mode="Markdown")
+	bot.send_message(sender_id, bs.rules.format(oferta.link), reply_markup=markup, parse_mode="Markdown")
 	user.step += 1
 	user.save()
 
