@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import telebot
 import sqlite3 as sqlite
 import re
@@ -228,9 +230,11 @@ def mobile(sender_id, message):
 	
 
 def rules(sender_id, message):
+
 	user = User.select().where(User.user_id == sender_id).get()
-	oferta = Oferta.get(Oferta.oferta_id == 1)
+	oferta = Oferta.get(Oferta.oferta_id == 1).get()
 	if message.text != bs.back:
+
 		if message.text != bs.accept:
 			if re.match(r'^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{3,10}$', message.text):
 				user.mobile = message.text
@@ -238,7 +242,7 @@ def rules(sender_id, message):
 				bot.send_message(sender_id, bs.mobile_error)
 				return False
 		else:
-			order =SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
+			order = SentOrder.select().where(SentOrder.user_id == sender_id).order_by(-SentOrder.order_id).get()
 			user.mobile = order.mobile
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 	agreement_button = types.KeyboardButton(bs.agreement)
@@ -247,6 +251,7 @@ def rules(sender_id, message):
 	markup.add(agreement_button)
 	markup.add(back_button)
 	markup.add(cancel_button)
+	
 	bot.send_message(sender_id, bs.rules.format(oferta.link), reply_markup=markup, parse_mode="Markdown")
 	user.step += 1
 	user.save()
@@ -318,6 +323,7 @@ def send_email(address, text):
 
 @bot.message_handler(content_types=['text'])
 def reply(message):
+
 	sender_id = message.chat.id
 	first_name = message.chat.first_name
 	if message.text == bs.checkout:
